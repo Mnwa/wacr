@@ -16,6 +16,11 @@ use std::path::PathBuf;
 #[actix_web::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
+    /*
+    TODO: Привязать сессию к uid
+    TODO: Сделать процессинг asr в одном экземпляре на один uuid
+    TODO: Ускорить инфу о дисконнекте
+     */
 
     let service_token = std::env::var("VK_API_SERVICE_TOKEN").expect("missed env SERVICE_TOKEN");
     let service_key = std::env::var("VK_API_SERVICE_KEY").expect("missed env SERVICE_KEY");
