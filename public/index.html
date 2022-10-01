@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Web RTC test</title>
+    <meta name="description" content="Our first page">
+    <meta name="keywords" content="html tutorial template">
+</head>
+<body>
+<video id="video1" width="160" height="120" autoplay muted></video>
+<br/>
+<label for="Token">Token: </label><textarea id="Token"></textarea>
+<br/>
+<label for="localSessionDescription">Browser base64 Session Description: </label><textarea id="localSessionDescription"
+                                                                                           readonly></textarea>
+<br/>
+<label for="remoteSessionDescription">Rust base64 Session Description: </label><textarea id="remoteSessionDescription"
+                                                                                         readonly></textarea>
+<br/>
+<label for="SessionID">Session ID: </label><textarea id="SessionID" readonly></textarea>
+<br/>
+<label for="Text">TEXT: </label><textarea id="Text" readonly></textarea>
+<br/>
+<button onclick="window.startSession()"> Start Session</button>
+<button onclick="window.stopSession()"> Stop Session</button>
+<button onclick="window.processText()"> Process Text</button>
+
+<div id="logs"></div>
+
+<script>
+    /* eslint-env browser */
+
+    let pc = new RTCPeerConnection({
+        iceServers: [
+            {
+                urls: 'stun:stun.l.google.com:19302'
+            }
+        ]
+    })
+    const log = msg => {
+        document.getElementById('logs').innerHTML += msg + '<br>'
+    };
+
+    window.startSession = () => {
+        navigator.mediaDevices.getUserMedia({video: true, audio: true})
+            .then(stream => {
+
+                document.getElementById('video1').srcObject = stream
+                stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+                pc.createOffer().then(d => pc.setLocalDescription(d)).catch(log)
+            }).catch(log)
+
+        pc.oniceconnectionstatechange = _ => log(pc.iceConnectionState)
+        pc.onicecandidate = async event => {
+            if (event.candidate === null) {
+                document.getElementById('localSessionDescription').value = JSON.stringify(pc.localDescription)
+                try {
+                    let response = await fetch('/session/create?access_token=' + document.getElementById('Token').value, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            offer: pc.localDescription
+                        })
+                    })
+                    let session = await response.json()
+                    if (session.hasOwnProperty('offer') && session.hasOwnProperty('session_id')) {
+                        document.getElementById('remoteSessionDescription').value = JSON.stringify(session.offer)
+                        document.getElementById('SessionID').value = session.session_id
+                        try {
+                            await pc.setRemoteDescription(new RTCSessionDescription(session.offer))
+                        } catch (e) {
+                            log(JSON.stringify(e))
+                        }
+                    } else if (session.hasOwnProperty('error')) {
+                        log(session.error)
+                    }
+                } catch (e) {
+                    log(JSON.stringify(e))
+                }
+            }
+        }
+    }
+
+    window.stopSession = () => {
+        pc.close()
+    }
+
+    window.processText = async () => {
+        try {
+            let response = await fetch('/session/asr?access_token=' + document.getElementById('Token').value, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_id: document.getElementById('SessionID').value
+                })
+            })
+
+            document.getElementById('Text').value = JSON.stringify(await response.json())
+        } catch (e) {
+            log(JSON.stringify(e))
+        }
+    }
+
+</script>
+</body>
+</html>
