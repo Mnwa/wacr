@@ -17,6 +17,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 pub type UserSessionStorage = DashMap<UserId, Arc<SessionStorage>>;
+pub type UserAsrProcessorStorage = DashMap<UserId, Arc<AsrProcessorStorage>>;
 
 #[actix_web::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -35,7 +36,7 @@ async fn main() -> std::io::Result<()> {
     let vk_client = web::Data::new(VkApi::new(service_token.clone()));
     let web_rtc_api = web::Data::new(create_api().expect("fail to create api instance"));
     let user_session_storage = web::Data::new(UserSessionStorage::new());
-    let asr_processor_storage = web::Data::new(AsrProcessorStorage::new());
+    let user_asr_processor_storage = web::Data::new(UserAsrProcessorStorage::new());
 
     let config = web::Data::new(SessionConfig { dir: audio_path });
 
@@ -49,7 +50,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(vk_client.clone())
             .app_data(web_rtc_api.clone())
             .app_data(user_session_storage.clone())
-            .app_data(asr_processor_storage.clone())
+            .app_data(user_asr_processor_storage.clone())
             .app_data(config.clone())
             .app_data(jwt_config.clone())
             .service(

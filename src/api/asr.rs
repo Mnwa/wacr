@@ -1,7 +1,8 @@
 use crate::asr::processor::{ProcessResponse, WaitForResponse};
-use crate::asr::AsrProcessorStorage;
 use crate::webrtc::CloseSession;
-use crate::{AsrProcessor, SessionConfig, UserId, UserSessionStorage, VkApi};
+use crate::{
+    AsrProcessor, SessionConfig, UserAsrProcessorStorage, UserId, UserSessionStorage, VkApi,
+};
 use actix_web::http::StatusCode;
 use actix_web::{post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use log::error;
@@ -12,7 +13,7 @@ use uuid::Uuid;
 pub async fn api_text_to_speech(
     req: HttpRequest,
     user_session_storage: web::Data<UserSessionStorage>,
-    asr_processor_storage: web::Data<AsrProcessorStorage>,
+    user_asr_processor_storage: web::Data<UserAsrProcessorStorage>,
     vk_client: web::Data<VkApi>,
     config: web::Data<SessionConfig>,
     session: web::Json<ProcessAsrRequest>,
@@ -26,7 +27,11 @@ pub async fn api_text_to_speech(
         Some(&uid) => uid,
     };
 
-    let session_storage = user_session_storage.entry(user_id).or_default().downgrade();
+    let session_storage = user_session_storage.entry(user_id).or_default().clone();
+    let asr_processor_storage = user_asr_processor_storage
+        .entry(user_id)
+        .or_default()
+        .clone();
 
     if !asr_processor_storage.contains_key(&session.session_id) {
         match session_storage.get(&session.session_id) {
