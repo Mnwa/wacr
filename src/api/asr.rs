@@ -1,7 +1,7 @@
-use crate::asr::processor::{ProcessRequest, ProcessResponse};
+use crate::asr::processor::{ProcessResponse, WaitForResponse};
+use crate::asr::AsrProcessorStorage;
 use crate::webrtc::CloseSession;
-use crate::{AsrProcessor, UserId, UserSessionStorage};
-use actix::Addr;
+use crate::{AsrProcessor, SessionConfig, UserId, UserSessionStorage, VkApi};
 use actix_web::http::StatusCode;
 use actix_web::{post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use log::error;
@@ -12,7 +12,9 @@ use uuid::Uuid;
 pub async fn api_text_to_speech(
     req: HttpRequest,
     user_session_storage: web::Data<UserSessionStorage>,
-    asr_processor: web::Data<Addr<AsrProcessor>>,
+    asr_processor_storage: web::Data<AsrProcessorStorage>,
+    vk_client: web::Data<VkApi>,
+    config: web::Data<SessionConfig>,
     session: web::Json<ProcessAsrRequest>,
 ) -> impl Responder {
     let user_id = match req.extensions().get::<UserId>() {
@@ -24,26 +26,34 @@ pub async fn api_text_to_speech(
         Some(&uid) => uid,
     };
 
-    let session_storage = user_session_storage.entry(user_id).or_default();
+    let session_storage = user_session_storage.entry(user_id).or_default().downgrade();
 
-    match session_storage.get(&session.session_id) {
-        Some(s) if s.connected() => {
-            let _ = s.send(CloseSession).await;
+    if !asr_processor_storage.contains_key(&session.session_id) {
+        match session_storage.get(&session.session_id) {
+            Some(s) if s.connected() => {
+                let _ = s.send(CloseSession).await;
+            }
+            None => {
+                return HttpResponse::build(StatusCode::BAD_REQUEST).json(ProcessAsrError {
+                    error: "webrtc session wasn't created",
+                });
+            }
+            _ => {}
         }
-        None => {
-            return HttpResponse::build(StatusCode::BAD_REQUEST).json(ProcessAsrError {
-                error: "webrtc session wasn't created",
-            });
-        }
-        _ => {}
     }
 
-    let ProcessResponse(rx) = match asr_processor
-        .send(ProcessRequest {
-            id: session.session_id,
+    let asr_processor = asr_processor_storage
+        .entry(session.session_id)
+        .or_insert_with(|| {
+            AsrProcessor::new(
+                session.session_id,
+                vk_client.into_inner(),
+                config.dir.clone(),
+            )
         })
-        .await
-    {
+        .downgrade();
+
+    let ProcessResponse(rx) = match asr_processor.send(WaitForResponse).await {
         Ok(r) => r,
         Err(e) => {
             session_storage.remove(&session.session_id);
@@ -54,12 +64,20 @@ pub async fn api_text_to_speech(
         }
     };
 
-    let text = match rx
-        .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
-    {
-        Ok(Ok(t)) => t,
-        Err(e) | Ok(Err(e)) => {
+    let sr = match rx.await {
+        Ok(r) => r,
+        Err(e) => {
+            session_storage.remove(&session.session_id);
+            error!(target: "api_asr", "error on preparing asr {}", e);
+            return HttpResponse::build(StatusCode::SERVICE_UNAVAILABLE).json(ProcessAsrError {
+                error: e.to_string(),
+            });
+        }
+    };
+
+    let text = match sr.as_ref() {
+        Ok(t) => t.clone(),
+        Err(e) => {
             session_storage.remove(&session.session_id);
             error!(target: "api_asr", "error on processing asr {}", e);
             return HttpResponse::build(StatusCode::SERVICE_UNAVAILABLE).json(ProcessAsrError {

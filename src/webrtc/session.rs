@@ -26,11 +26,67 @@ pub struct Session {
 
 impl Session {
     pub fn new(writer: OggWriter<File>, peer_connection: Arc<RTCPeerConnection>) -> Addr<Self> {
-        Self::create(|_| Session {
-            writer,
-            peer_connection,
-            startup: Instant::now(),
-            update_time: Instant::now(),
+        Self::create(|ctx| {
+            let addr = ctx.address();
+
+            let session = Session {
+                writer,
+                peer_connection: peer_connection.clone(),
+                startup: Instant::now(),
+                update_time: Instant::now(),
+            };
+
+            ctx.spawn(
+                async move {
+                    if let Err(e) = peer_connection
+                        .add_transceiver_from_kind(RTPCodecType::Audio, &[])
+                        .await
+                    {
+                        warn!(target: "session", "add transceiver error: {}", e);
+                        addr.do_send(CloseSession);
+                        return;
+                    }
+
+                    peer_connection
+                        .on_track({
+                            let addr = addr.clone();
+                            Box::new(
+                                move |track: Option<Arc<TrackRemote>>,
+                                      _receiver: Option<Arc<RTCRtpReceiver>>| {
+                                    let addr = addr.clone();
+                                    match track {
+                                        Some(track) => Box::pin(async move {
+                                            if let Err(e) = addr.send(AcceptRemote(track)).await {
+                                                warn!(target: "session", "fail to send remote: {}", e)
+                                            }
+                                        }),
+                                        None => Box::pin(async {}),
+                                    }
+                                },
+                            )
+                        })
+                        .await;
+
+                    peer_connection
+                        .on_ice_connection_state_change(Box::new(move |connection_state: RTCIceConnectionState| {
+                            debug!(target: "session", "connection state has changed {}", connection_state);
+
+                            let addr = addr.clone();
+
+                            Box::pin(async move {
+                                if matches!(connection_state, RTCIceConnectionState::Failed | RTCIceConnectionState::Disconnected) {
+                                    if let Err(e) = addr.send(CloseSession).await {
+                                        warn!(target: "session", "fail to close session: {}", e)
+                                    }
+                                }
+                            })
+                        }))
+                        .await;
+                }
+                    .into_actor(&session),
+            );
+
+            session
         })
     }
 }
@@ -39,9 +95,6 @@ impl Actor for Session {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        let peer_connection = self.peer_connection.clone();
-        let addr = ctx.address();
-
         ctx.add_stream(futures::stream::unfold(
             actix_web::rt::time::interval(CHECKS_INTERVAL),
             |mut interval| async move {
@@ -49,56 +102,6 @@ impl Actor for Session {
                 Some((TimeoutChecks, interval))
             },
         ));
-
-        ctx.spawn(
-            async move {
-                if let Err(e) = peer_connection
-                    .add_transceiver_from_kind(RTPCodecType::Audio, &[])
-                    .await
-                {
-                    warn!(target: "session", "add transceiver error: {}", e);
-                    addr.do_send(CloseSession);
-                    return;
-                }
-
-                peer_connection
-                    .on_track({
-                        let addr = addr.clone();
-                        Box::new(
-                            move |track: Option<Arc<TrackRemote>>,
-                                  _receiver: Option<Arc<RTCRtpReceiver>>| {
-                                let addr = addr.clone();
-                                match track {
-                                    Some(track) => Box::pin(async move {
-                                        if let Err(e) = addr.send(AcceptRemote(track)).await {
-                                            warn!(target: "session", "fail to send remote: {}", e)
-                                        }
-                                    }),
-                                    None => Box::pin(async {}),
-                                }
-                            },
-                        )
-                    })
-                    .await;
-
-                peer_connection
-                    .on_ice_connection_state_change(Box::new(move |connection_state: RTCIceConnectionState| {
-                        debug!(target: "session", "connection state has changed {}", connection_state);
-
-                        let addr = addr.clone();
-
-                        Box::pin(async move {
-                            if matches!(connection_state, RTCIceConnectionState::Failed | RTCIceConnectionState::Disconnected) {
-                                if let Err(e) = addr.send(CloseSession).await {
-                                    warn!(target: "session", "fail to close session: {}", e)
-                                }
-                            }
-                        })
-                    }))
-                    .await;
-            }
-            .into_actor(self),
-        );
     }
 
     fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
