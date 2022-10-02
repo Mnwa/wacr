@@ -238,7 +238,7 @@ struct RtpPacket(Packet);
 
 #[derive(Message)]
 #[rtype(result = "()")]
-struct CloseSession;
+pub struct CloseSession;
 
 #[derive(Message)]
 #[rtype(result = "()")]

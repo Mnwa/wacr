@@ -1,22 +1,41 @@
 use crate::asr::processor::{ProcessRequest, ProcessResponse};
-use crate::{AsrProcessor, SessionStorage};
+use crate::webrtc::CloseSession;
+use crate::{AsrProcessor, UserId, UserSessionStorage};
 use actix::Addr;
 use actix_web::http::StatusCode;
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::{post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use log::error;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[post("/asr")]
 pub async fn api_text_to_speech(
-    session_storage: web::Data<SessionStorage>,
+    req: HttpRequest,
+    user_session_storage: web::Data<UserSessionStorage>,
     asr_processor: web::Data<Addr<AsrProcessor>>,
     session: web::Json<ProcessAsrRequest>,
 ) -> impl Responder {
-    if matches!(session_storage.get(&session.session_id), Some(s) if s.connected()) {
-        return HttpResponse::build(StatusCode::BAD_REQUEST).json(ProcessAsrError {
-            error: "webrtc session wasn't closed".to_string(),
-        });
+    let user_id = match req.extensions().get::<UserId>() {
+        None => {
+            return HttpResponse::build(StatusCode::UNAUTHORIZED).json(ProcessAsrError {
+                error: "authorization is failed",
+            });
+        }
+        Some(&uid) => uid,
+    };
+
+    let session_storage = user_session_storage.entry(user_id).or_default();
+
+    match session_storage.get(&session.session_id) {
+        Some(s) if s.connected() => {
+            let _ = s.send(CloseSession).await;
+        }
+        None => {
+            return HttpResponse::build(StatusCode::BAD_REQUEST).json(ProcessAsrError {
+                error: "webrtc session wasn't created",
+            });
+        }
+        _ => {}
     }
 
     let ProcessResponse(rx) = match asr_processor
@@ -65,6 +84,6 @@ pub struct ProcessAsrResponse {
 }
 
 #[derive(Serialize)]
-pub struct ProcessAsrError {
-    error: String,
+pub struct ProcessAsrError<E> {
+    error: E,
 }

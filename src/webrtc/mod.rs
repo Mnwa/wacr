@@ -17,7 +17,7 @@ use webrtc::rtp_transceiver::rtp_codec::{
 };
 
 mod session;
-pub use session::{OfferRequest, OfferResponse, Session};
+pub use session::{CloseSession, OfferRequest, OfferResponse, Session};
 
 pub type SessionStorage = DashMap<Uuid, Addr<Session>>;
 

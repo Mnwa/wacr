@@ -3,7 +3,7 @@ mod asr;
 mod webrtc;
 
 use crate::api::asr::api_text_to_speech;
-use crate::api::jwt::{generate_vk_jwt_method, jwt_token_guard, JwtConfig};
+use crate::api::jwt::{generate_vk_jwt_method, jwt_token_guard, JwtConfig, UserId};
 use crate::api::session::{api_create_session, SessionConfig};
 use crate::asr::client::VkApi;
 use crate::asr::processor::AsrProcessor;
@@ -11,7 +11,11 @@ use crate::webrtc::{create_api, SessionStorage};
 use actix_files::Files;
 use actix_web::web::scope;
 use actix_web::{web, App, HttpServer};
+use dashmap::DashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
+
+pub type UserSessionStorage = DashMap<UserId, Arc<SessionStorage>>;
 
 #[actix_web::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -29,7 +33,7 @@ async fn main() -> std::io::Result<()> {
 
     let vk_client = web::Data::new(VkApi::new(service_token.clone()));
     let web_rtc_api = web::Data::new(create_api().expect("fail to create api instance"));
-    let session_storage = web::Data::new(SessionStorage::new());
+    let user_session_storage = web::Data::new(UserSessionStorage::new());
     let asr_processor = web::Data::new(AsrProcessor::new(
         vk_client.clone().into_inner(),
         audio_path.clone(),
@@ -46,7 +50,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(vk_client.clone())
             .app_data(web_rtc_api.clone())
-            .app_data(session_storage.clone())
+            .app_data(user_session_storage.clone())
             .app_data(config.clone())
             .app_data(jwt_config.clone())
             .app_data(asr_processor.clone())

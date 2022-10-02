@@ -1,6 +1,7 @@
-use crate::webrtc::{create_session, OfferRequest, OfferResponse, SessionStorage};
+use crate::webrtc::{create_session, OfferRequest, OfferResponse};
+use crate::{UserId, UserSessionStorage};
 use actix_web::http::StatusCode;
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::{post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -10,15 +11,25 @@ use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 
 #[post("/create")]
 pub async fn api_create_session(
+    req: HttpRequest,
     api: web::Data<API>,
-    session_storage: web::Data<SessionStorage>,
+    user_session_storage: web::Data<UserSessionStorage>,
     config: web::Data<SessionConfig>,
     offer_request: web::Json<CreateSessionRequest>,
 ) -> impl Responder {
+    let user_id = match req.extensions().get::<UserId>() {
+        None => {
+            return HttpResponse::build(StatusCode::UNAUTHORIZED).json(SessionErrorResponse {
+                error: "authorization is failed",
+            });
+        }
+        Some(&uid) => uid,
+    };
+
     let (session_id, session) = match create_session(
         api.as_ref(),
         config.dir.clone(),
-        session_storage.into_inner(),
+        user_session_storage.entry(user_id).or_default().clone(),
     )
     .await
     {

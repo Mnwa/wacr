@@ -132,7 +132,7 @@ pub struct JwtConfig {
 
 pub type OwnerId = i64;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct UserId(pub OwnerId);
 
 #[derive(Debug, Serialize, Deserialize)]
