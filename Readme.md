@@ -1,5 +1,5 @@
 # WACR
-WACR is a backend for WebRTC -> [VK ASR](https://vk.com/voice-tech) (speech recognition technology) interaction.
+WACR is the backend for WebRTC -> [VK ASR](https://vk.com/voice-tech) (speech recognition technology) interaction.
 
 ## How it works
 The client just calls to WACR backend by WebRTC technology. 
@@ -8,6 +8,11 @@ Saved audio stream will send to VK ACR backend by [API](https://dev.vk.com/api/v
 Then WACR save in-memory recognized text and send it to client.
 
 ## Usage
+### Install from Cargo and run binary
+```bash
+cargo install wacr
+RUST_LOG=debug;VK_API_SERVICE_TOKEN=XXX;VK_API_SERVICE_KEY=YYY wacr
+```
 ### Compile and run from Cargo
 ```bash
 RUST_LOG=debug;VK_API_SERVICE_TOKEN=XXX;VK_API_SERVICE_KEY=YYY cargo run --package wacr --bin wacr
