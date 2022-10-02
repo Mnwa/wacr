@@ -13,6 +13,7 @@ use actix_files::Files;
 use actix_web::web::scope;
 use actix_web::{web, App, HttpServer};
 use dashmap::DashMap;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -25,6 +26,16 @@ async fn main() -> std::io::Result<()> {
     /*
     TODO: Garbage Collector
      */
+
+    let addr = std::env::var("LISTEN_ADDRESS")
+        .unwrap_or_else(|_| "127.0.0.1:8080".to_string())
+        .parse::<SocketAddr>()
+        .expect("socket address is invalid");
+
+    let jwt_expiration = std::env::var("JWT_EXPIRATION")
+        .unwrap_or_else(|_| "3600".to_string())
+        .parse()
+        .expect("jwt expiration is invalid");
 
     let service_token = std::env::var("VK_API_SERVICE_TOKEN").expect("missed env SERVICE_TOKEN");
     let service_key = std::env::var("VK_API_SERVICE_KEY").expect("missed env SERVICE_KEY");
@@ -40,7 +51,7 @@ async fn main() -> std::io::Result<()> {
 
     let jwt_config = web::Data::new(JwtConfig {
         service_key,
-        expiration: 3600,
+        expiration: jwt_expiration,
     });
 
     HttpServer::new(move || {
@@ -61,7 +72,7 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/static", "./public").show_files_listing())
             .service(generate_vk_jwt_method)
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(addr)?
     .run()
     .await
 }
