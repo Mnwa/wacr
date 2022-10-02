@@ -88,6 +88,14 @@ Content-Type: application/json
 GET http://127.0.0.1:8080/session/listen/{session_id}?access_token=XXX
 ```
 
+### Possible errors
+#### Base Error Response
+```json
+{
+  "error": "error occurred"
+}
+```
+
 ## Startup environments
 ### Required
 ```bash
