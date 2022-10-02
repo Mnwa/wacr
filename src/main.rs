@@ -23,9 +23,7 @@ pub type UserAsrProcessorStorage = DashMap<UserId, Arc<AsrProcessorStorage>>;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
     /*
-    TODO: Привязать сессию к uid
-    TODO: Сделать процессинг asr в одном экземпляре на один uuid
-    TODO: Ускорить инфу о дисконнекте
+    TODO: Garbage Collector
      */
 
     let service_token = std::env::var("VK_API_SERVICE_TOKEN").expect("missed env SERVICE_TOKEN");
