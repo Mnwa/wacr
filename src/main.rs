@@ -4,7 +4,7 @@ mod webrtc;
 
 use crate::api::asr::api_text_to_speech;
 use crate::api::jwt::{generate_vk_jwt_method, jwt_token_guard, JwtConfig, UserId};
-use crate::api::session::{api_create_session, SessionConfig};
+use crate::api::session::{api_create_session, api_get_audio, SessionConfig};
 use crate::asr::client::VkApi;
 use crate::asr::processor::AsrProcessor;
 use crate::asr::AsrProcessorStorage;
@@ -57,6 +57,7 @@ async fn main() -> std::io::Result<()> {
                 scope("/session")
                     .guard(jwt_token_guard(jwt_config.service_key.clone()))
                     .service(api_create_session)
+                    .service(api_get_audio)
                     .service(api_text_to_speech),
             )
             .service(Files::new("/static", "./public").show_files_listing())

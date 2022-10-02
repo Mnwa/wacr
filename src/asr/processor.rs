@@ -4,7 +4,6 @@ use crate::webrtc::get_audio_path;
 use crate::VkApi;
 use actix::prelude::*;
 use log::error;
-use std::fs::remove_file;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -86,10 +85,6 @@ impl AsrProcessor {
                         }
                     }
                     .await;
-
-                    if let Err(e) = remove_file(audio_path) {
-                        error!("fail to drop audio file: {}", e)
-                    }
 
                     if let Err(e) = addr.send(AcceptResult(response)).await {
                         error!("fail to accept result after processing {}", e)

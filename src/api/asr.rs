@@ -27,11 +27,12 @@ pub async fn api_text_to_speech(
         Some(&uid) => uid,
     };
 
-    let session_storage = user_session_storage.entry(user_id).or_default().clone();
     let asr_processor_storage = user_asr_processor_storage
         .entry(user_id)
         .or_default()
         .clone();
+
+    let session_storage = user_session_storage.entry(user_id).or_default().clone();
 
     if !asr_processor_storage.contains_key(&session.session_id) {
         match session_storage.get(&session.session_id) {
@@ -61,7 +62,6 @@ pub async fn api_text_to_speech(
     let ProcessResponse(rx) = match asr_processor.send(WaitForResponse).await {
         Ok(r) => r,
         Err(e) => {
-            session_storage.remove(&session.session_id);
             error!(target: "api_asr", "error on sending asr request {}", e);
             return HttpResponse::build(StatusCode::SERVICE_UNAVAILABLE).json(ProcessAsrError {
                 error: e.to_string(),
@@ -72,7 +72,6 @@ pub async fn api_text_to_speech(
     let sr = match rx.await {
         Ok(r) => r,
         Err(e) => {
-            session_storage.remove(&session.session_id);
             error!(target: "api_asr", "error on preparing asr {}", e);
             return HttpResponse::build(StatusCode::SERVICE_UNAVAILABLE).json(ProcessAsrError {
                 error: e.to_string(),
@@ -83,15 +82,12 @@ pub async fn api_text_to_speech(
     let text = match sr.as_ref() {
         Ok(t) => t.clone(),
         Err(e) => {
-            session_storage.remove(&session.session_id);
             error!(target: "api_asr", "error on processing asr {}", e);
             return HttpResponse::build(StatusCode::SERVICE_UNAVAILABLE).json(ProcessAsrError {
                 error: e.to_string(),
             });
         }
     };
-
-    session_storage.remove(&session.session_id);
 
     HttpResponse::Ok().json(ProcessAsrResponse { text })
 }

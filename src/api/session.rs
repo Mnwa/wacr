@@ -1,13 +1,45 @@
-use crate::webrtc::{create_session, OfferRequest, OfferResponse};
+use crate::webrtc::{create_session, get_audio_path, OfferRequest, OfferResponse};
 use crate::{UserId, UserSessionStorage};
+use actix_files::NamedFile;
 use actix_web::http::StatusCode;
-use actix_web::{post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use uuid::Uuid;
 use webrtc::api::API;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
+
+#[get("/listen/{session_id}")]
+pub async fn api_get_audio(
+    req: HttpRequest,
+    user_session_storage: web::Data<UserSessionStorage>,
+    path: web::Path<(Uuid,)>,
+    config: web::Data<SessionConfig>,
+) -> impl Responder {
+    let user_id = match req.extensions().get::<UserId>() {
+        None => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "authorization is failed",
+            ));
+        }
+        Some(&uid) => uid,
+    };
+
+    let (session_id,) = path.into_inner();
+
+    let session_storage = user_session_storage.entry(user_id).or_default();
+
+    if !matches!(session_storage.get(&session_id), Some(s) if !s.connected()) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::WouldBlock,
+            "session is writing",
+        ));
+    }
+
+    NamedFile::open_async(get_audio_path(session_id, config.dir.clone())).await
+}
 
 #[post("/create")]
 pub async fn api_create_session(
