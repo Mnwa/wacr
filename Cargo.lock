@@ -2643,7 +2643,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sha2 0.10.6",
- "tokio",
  "url",
  "uuid",
  "vkclient",

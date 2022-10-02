@@ -33,10 +33,6 @@ features = ["serde"]
 version = "1"
 features = ["v4", "serde"]
 
-[dependencies.tokio]
-version = "1"
-features = ["full"]
-
 [dependencies.webrtc]
 version = "0.5"
 

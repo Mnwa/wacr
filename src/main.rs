@@ -19,7 +19,7 @@ use std::sync::Arc;
 pub type UserSessionStorage = DashMap<UserId, Arc<SessionStorage>>;
 pub type UserAsrProcessorStorage = DashMap<UserId, Arc<AsrProcessorStorage>>;
 
-#[actix_web::main] // or #[tokio::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
     /*
