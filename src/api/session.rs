@@ -1,5 +1,7 @@
+use crate::garbage::collector::GarbageCollector;
 use crate::webrtc::{create_session, get_audio_path, OfferRequest, OfferResponse};
 use crate::{UserId, UserSessionStorage};
+use actix::Addr;
 use actix_files::NamedFile;
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
@@ -47,6 +49,7 @@ pub async fn api_create_session(
     api: web::Data<API>,
     user_session_storage: web::Data<UserSessionStorage>,
     config: web::Data<SessionConfig>,
+    garbage_collector: web::Data<Addr<GarbageCollector>>,
     offer_request: web::Json<CreateSessionRequest>,
 ) -> impl Responder {
     let user_id = match req.extensions().get::<UserId>() {
@@ -59,9 +62,11 @@ pub async fn api_create_session(
     };
 
     let (session_id, session) = match create_session(
+        user_id,
         api.as_ref(),
         config.dir.clone(),
         user_session_storage.entry(user_id).or_default().clone(),
+        garbage_collector.into_inner(),
     )
     .await
     {

@@ -1,8 +1,10 @@
 use crate::asr::processor::{ProcessResponse, WaitForResponse};
+use crate::garbage::collector::GarbageCollector;
 use crate::webrtc::CloseSession;
 use crate::{
     AsrProcessor, SessionConfig, UserAsrProcessorStorage, UserId, UserSessionStorage, VkApi,
 };
+use actix::Addr;
 use actix_web::http::StatusCode;
 use actix_web::{post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use log::error;
@@ -16,6 +18,7 @@ pub async fn api_text_to_speech(
     user_asr_processor_storage: web::Data<UserAsrProcessorStorage>,
     vk_client: web::Data<VkApi>,
     config: web::Data<SessionConfig>,
+    garbage_collector: web::Data<Addr<GarbageCollector>>,
     session: web::Json<ProcessAsrRequest>,
 ) -> impl Responder {
     let user_id = match req.extensions().get::<UserId>() {
@@ -40,7 +43,7 @@ pub async fn api_text_to_speech(
                 let _ = s.send(CloseSession).await;
             }
             None => {
-                return HttpResponse::build(StatusCode::BAD_REQUEST).json(ProcessAsrError {
+                return HttpResponse::build(StatusCode::NOT_FOUND).json(ProcessAsrError {
                     error: "webrtc session wasn't created",
                 });
             }
@@ -53,8 +56,10 @@ pub async fn api_text_to_speech(
         .or_insert_with(|| {
             AsrProcessor::new(
                 session.session_id,
+                user_id,
                 vk_client.into_inner(),
                 config.dir.clone(),
+                garbage_collector.into_inner(),
             )
         })
         .downgrade();

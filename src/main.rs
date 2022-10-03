@@ -1,5 +1,6 @@
 mod api;
 mod asr;
+mod garbage;
 mod webrtc;
 
 use crate::api::asr::api_text_to_speech;
@@ -8,6 +9,7 @@ use crate::api::session::{api_create_session, api_get_audio, SessionConfig};
 use crate::asr::client::VkApi;
 use crate::asr::processor::AsrProcessor;
 use crate::asr::AsrProcessorStorage;
+use crate::garbage::collector::GarbageCollector;
 use crate::webrtc::{create_api, SessionStorage};
 use actix_files::Files;
 use actix_web::web::scope;
@@ -23,9 +25,6 @@ pub type UserAsrProcessorStorage = DashMap<UserId, Arc<AsrProcessorStorage>>;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
-    /*
-    TODO: Garbage Collector
-     */
 
     let addr = std::env::var("LISTEN_ADDRESS")
         .unwrap_or_else(|_| "127.0.0.1:8080".to_string())
@@ -33,6 +32,11 @@ async fn main() -> std::io::Result<()> {
         .expect("socket address is invalid");
 
     let jwt_expiration = std::env::var("JWT_EXPIRATION")
+        .unwrap_or_else(|_| "3600".to_string())
+        .parse()
+        .expect("jwt expiration is invalid");
+
+    let garbage_collector_ttl = std::env::var("GARBAGE_COLLECTOR_TTL")
         .unwrap_or_else(|_| "3600".to_string())
         .parse()
         .expect("jwt expiration is invalid");
@@ -54,6 +58,13 @@ async fn main() -> std::io::Result<()> {
         expiration: jwt_expiration,
     });
 
+    let garbage_collector = web::Data::new(GarbageCollector::new(
+        user_session_storage.clone().into_inner(),
+        user_asr_processor_storage.clone().into_inner(),
+        config.dir.clone(),
+        garbage_collector_ttl,
+    ));
+
     HttpServer::new(move || {
         App::new()
             .app_data(vk_client.clone())
@@ -62,6 +73,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(user_asr_processor_storage.clone())
             .app_data(config.clone())
             .app_data(jwt_config.clone())
+            .app_data(garbage_collector.clone())
             .service(
                 scope("/session")
                     .guard(jwt_token_guard(jwt_config.service_key.clone()))

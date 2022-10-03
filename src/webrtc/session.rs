@@ -1,8 +1,11 @@
+use crate::garbage::collector::{ClearSession, GarbageCollector};
+use crate::UserId;
 use actix::prelude::*;
 use log::{debug, error, trace, warn};
 use std::fs::File;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use uuid::Uuid;
 use webrtc::ice_transport::ice_connection_state::RTCIceConnectionState;
 use webrtc::media::io::ogg_writer::OggWriter;
 use webrtc::media::io::Writer;
@@ -18,6 +21,9 @@ const TIMOUT: Duration = Duration::from_secs(10);
 const TOTAL_TIMOUT: Duration = Duration::from_secs(100);
 
 pub struct Session {
+    id: Uuid,
+    user_id: UserId,
+    garbage_collector: Arc<Addr<GarbageCollector>>,
     writer: OggWriter<File>,
     peer_connection: Arc<RTCPeerConnection>,
     startup: Instant,
@@ -25,11 +31,20 @@ pub struct Session {
 }
 
 impl Session {
-    pub fn new(writer: OggWriter<File>, peer_connection: Arc<RTCPeerConnection>) -> Addr<Self> {
+    pub fn new(
+        id: Uuid,
+        user_id: UserId,
+        garbage_collector: Arc<Addr<GarbageCollector>>,
+        writer: OggWriter<File>,
+        peer_connection: Arc<RTCPeerConnection>,
+    ) -> Addr<Self> {
         Self::create(|ctx| {
             let addr = ctx.address();
 
             let session = Session {
+                id,
+                user_id,
+                garbage_collector,
                 writer,
                 peer_connection: peer_connection.clone(),
                 startup: Instant::now(),
@@ -119,6 +134,9 @@ impl Actor for Session {
             }
             .into_actor(self),
         );
+
+        self.garbage_collector
+            .do_send(ClearSession(self.user_id, self.id));
 
         Running::Stop
     }

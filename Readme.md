@@ -106,6 +106,7 @@ VK_API_SERVICE_KEY=YYY # Service key for validating query on token generation
 ### Optional
 ```bash
 LISTEN_ADDRESS=127.0.0.1:8080 # Listening address
-JWT_EXPIRATION=3600 # Time how much access token will valid
+JWT_EXPIRATION=3600 # How many seconds access token will valid
+GARBAGE_COLLECTOR_TTL=3600 # How many seconds audio files and text results will alive
 AUDIO_PATH=/tmp # The directory where audio files saving
 ```

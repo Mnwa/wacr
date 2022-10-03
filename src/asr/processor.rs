@@ -1,7 +1,8 @@
 use crate::asr::client::{CheckProcessingStatusResponse, SpeechModel};
 use crate::asr::upload::Uploader;
+use crate::garbage::collector::{ClearAsr, GarbageCollector};
 use crate::webrtc::get_audio_path;
-use crate::VkApi;
+use crate::{UserId, VkApi};
 use actix::prelude::*;
 use log::error;
 use std::path::PathBuf;
@@ -10,16 +11,28 @@ use std::time::Duration;
 use uuid::Uuid;
 
 pub struct AsrProcessor {
+    id: Uuid,
+    user_id: UserId,
     result: Option<Arc<std::io::Result<String>>>,
     senders: Vec<futures::channel::oneshot::Sender<Arc<std::io::Result<String>>>>,
+    garbage_collector: Arc<Addr<GarbageCollector>>,
 }
 
 impl AsrProcessor {
-    pub fn new(id: Uuid, client: Arc<VkApi>, dir: PathBuf) -> Addr<Self> {
+    pub fn new(
+        id: Uuid,
+        user_id: UserId,
+        client: Arc<VkApi>,
+        dir: PathBuf,
+        garbage_collector: Arc<Addr<GarbageCollector>>,
+    ) -> Addr<Self> {
         Self::create(|ctx| {
             let processor = Self {
+                id,
+                user_id,
                 result: None,
                 senders: vec![],
+                garbage_collector,
             };
             let addr = ctx.address();
 
@@ -133,6 +146,9 @@ impl Handler<AcceptResult> for AsrProcessor {
         for sender in senders {
             let _ = sender.send(r.clone());
         }
+
+        self.garbage_collector
+            .do_send(ClearAsr(self.user_id, self.id))
     }
 }
 

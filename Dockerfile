@@ -22,5 +22,6 @@ RUN cargo build --release --bin wacr
 FROM debian:buster-slim
 COPY --from=builder /usr/src/wacr/target/release/wacr /usr/local/bin/wacr
 ENV JWT_EXPIRATION=3600
+ENV GARBAGE_COLLECTOR_TTL=3600
 ENV AUDIO_PATH=/tmp
 CMD ["wacr"]
