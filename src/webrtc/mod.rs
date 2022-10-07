@@ -18,7 +18,7 @@ use webrtc::rtp_transceiver::rtp_codec::{
 
 mod session;
 use crate::garbage::collector::GarbageCollector;
-use crate::UserId;
+use crate::{SessionConfig, UserId};
 pub use session::{CloseSession, OfferRequest, OfferResponse, Session};
 
 pub type SessionStorage = DashMap<Uuid, Addr<Session>>;
@@ -54,13 +54,13 @@ pub fn create_api() -> webrtc::error::Result<API> {
 pub async fn create_session(
     user_id: UserId,
     api: &API,
-    dir: PathBuf,
     session_storage: Arc<SessionStorage>,
     garbage_collector: Arc<Addr<GarbageCollector>>,
+    config: SessionConfig,
 ) -> std::io::Result<(Uuid, Addr<Session>)> {
     let uuid = Uuid::new_v4();
 
-    let dir = get_audio_path(uuid, dir);
+    let dir = get_audio_path(uuid, config.dir);
 
     let writer = actix_web::web::block(move || {
         let file = File::create(dir)?;
@@ -76,7 +76,15 @@ pub async fn create_session(
         .await
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
-    let session = Session::new(uuid, user_id, garbage_collector, writer, Arc::new(peer));
+    let session = Session::new(
+        uuid,
+        user_id,
+        garbage_collector,
+        writer,
+        Arc::new(peer),
+        config.total_timeout,
+        config.timeout,
+    );
 
     session_storage.insert(uuid, session.clone());
 

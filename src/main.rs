@@ -18,6 +18,7 @@ use dashmap::DashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 pub type UserSessionStorage = DashMap<UserId, Arc<SessionStorage>>;
 pub type UserAsrProcessorStorage = DashMap<UserId, Arc<AsrProcessorStorage>>;
@@ -36,6 +37,18 @@ async fn main() -> std::io::Result<()> {
         .parse()
         .expect("jwt expiration is invalid");
 
+    let session_timeout = std::env::var("SESSION_KEEP_ALIVE_TIMEOUT")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .map(Duration::from_secs)
+        .expect("jwt expiration is invalid");
+
+    let session_total_timeout = std::env::var("SESSION_TOTAL_TIMEOUT")
+        .unwrap_or_else(|_| "100".to_string())
+        .parse()
+        .map(Duration::from_secs)
+        .expect("jwt expiration is invalid");
+
     let garbage_collector_ttl = std::env::var("GARBAGE_COLLECTOR_TTL")
         .unwrap_or_else(|_| "3600".to_string())
         .parse()
@@ -51,7 +64,11 @@ async fn main() -> std::io::Result<()> {
     let user_session_storage = web::Data::new(UserSessionStorage::new());
     let user_asr_processor_storage = web::Data::new(UserAsrProcessorStorage::new());
 
-    let config = web::Data::new(SessionConfig { dir: audio_path });
+    let config = web::Data::new(SessionConfig {
+        dir: audio_path,
+        timeout: session_timeout,
+        total_timeout: session_total_timeout,
+    });
 
     let jwt_config = web::Data::new(JwtConfig {
         service_key,

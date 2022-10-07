@@ -17,8 +17,6 @@ use webrtc::rtp_transceiver::rtp_receiver::RTCRtpReceiver;
 use webrtc::track::track_remote::TrackRemote;
 
 const CHECKS_INTERVAL: Duration = Duration::from_secs(10);
-const TIMOUT: Duration = Duration::from_secs(10);
-const TOTAL_TIMOUT: Duration = Duration::from_secs(100);
 
 pub struct Session {
     id: Uuid,
@@ -28,6 +26,8 @@ pub struct Session {
     peer_connection: Arc<RTCPeerConnection>,
     startup: Instant,
     update_time: Instant,
+    total_timeout: Duration,
+    timeout: Duration,
 }
 
 impl Session {
@@ -37,6 +37,8 @@ impl Session {
         garbage_collector: Arc<Addr<GarbageCollector>>,
         writer: OggWriter<File>,
         peer_connection: Arc<RTCPeerConnection>,
+        total_timeout: Duration,
+        timeout: Duration,
     ) -> Addr<Self> {
         Self::create(|ctx| {
             let addr = ctx.address();
@@ -49,6 +51,8 @@ impl Session {
                 peer_connection: peer_connection.clone(),
                 startup: Instant::now(),
                 update_time: Instant::now(),
+                total_timeout,
+                timeout,
             };
 
             ctx.spawn(
@@ -187,7 +191,7 @@ impl StreamHandler<TimeoutChecks> for Session {
             startup_time_left.as_millis(),
             last_update_time_left.as_millis()
         );
-        if last_update_time_left > TIMOUT || startup_time_left > TOTAL_TIMOUT {
+        if last_update_time_left > self.timeout || startup_time_left > self.total_timeout {
             ctx.notify(CloseSession)
         }
     }

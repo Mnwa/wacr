@@ -8,6 +8,7 @@ use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responde
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::time::Duration;
 use uuid::Uuid;
 use webrtc::api::API;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
@@ -64,9 +65,9 @@ pub async fn api_create_session(
     let (session_id, session) = match create_session(
         user_id,
         api.as_ref(),
-        config.dir.clone(),
         user_session_storage.entry(user_id).or_default().clone(),
         garbage_collector.into_inner(),
+        SessionConfig::clone(&config),
     )
     .await
     {
@@ -127,6 +128,9 @@ pub struct SessionErrorResponse<E> {
     error: E,
 }
 
+#[derive(Clone)]
 pub struct SessionConfig {
     pub dir: PathBuf,
+    pub total_timeout: Duration,
+    pub timeout: Duration,
 }

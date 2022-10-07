@@ -108,5 +108,7 @@ VK_API_SERVICE_KEY=YYY # Service key for validating query on token generation
 LISTEN_ADDRESS=127.0.0.1:8080 # Listening address
 JWT_EXPIRATION=3600 # How many seconds access token will valid
 GARBAGE_COLLECTOR_TTL=3600 # How many seconds audio files and text results will alive
+SESSION_KEEP_ALIVE_TIMEOUT=10 # How many seconds webrtc session will alive without incoming packets
+SESSION_TOTAL_TIMEOUT=100 # Max number of seconds webrtc session will alive
 AUDIO_PATH=/tmp # The directory where audio files saving
 ```
