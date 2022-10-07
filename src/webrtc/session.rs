@@ -165,6 +165,10 @@ impl Handler<AcceptRemote> for Session {
 
 impl StreamHandler<RtpPacket> for Session {
     fn handle(&mut self, RtpPacket(packet): RtpPacket, _ctx: &mut Self::Context) {
+        if packet.payload.is_empty() {
+            return;
+        }
+
         trace!(target: "session", "process packet {:#?}", packet);
         if let Err(e) = self.writer.write_rtp(&packet) {
             warn!(target: "session", "write rtp error: {}", e);
