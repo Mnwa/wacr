@@ -1,13 +1,16 @@
 use actix::Addr;
 use dashmap::DashMap;
 use log::info;
+use std::collections::HashSet;
 use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 use uuid::Uuid;
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine::{MediaEngine, MIME_TYPE_OPUS};
+use webrtc::api::setting_engine::SettingEngine;
 use webrtc::api::{APIBuilder, API};
+use webrtc::ice::udp_network::{EphemeralUDP, UDPNetwork};
 use webrtc::ice_transport::ice_server::RTCIceServer;
 use webrtc::interceptor::registry::Registry;
 use webrtc::media::io::ogg_writer::OggWriter;
@@ -23,7 +26,12 @@ pub use session::{CloseSession, OfferRequest, OfferResponse, Session};
 
 pub type SessionStorage = DashMap<Uuid, Addr<Session>>;
 
-pub fn create_api() -> webrtc::error::Result<API> {
+pub struct PortRange(pub u16, pub u16);
+
+pub fn create_api(
+    PortRange(min, max): PortRange,
+    allowed_nets: Option<HashSet<String>>,
+) -> webrtc::error::Result<API> {
     let mut m = MediaEngine::default();
 
     m.register_codec(
@@ -45,9 +53,19 @@ pub fn create_api() -> webrtc::error::Result<API> {
 
     registry = register_default_interceptors(registry, &mut m)?;
 
+    let mut settings = SettingEngine::default();
+    settings.set_udp_network(UDPNetwork::Ephemeral(
+        EphemeralUDP::new(min, max).expect("ports range is invalid"),
+    ));
+
+    if let Some(nets) = allowed_nets {
+        settings.set_interface_filter(Box::new(move |interface| nets.contains(interface)))
+    }
+
     Ok(APIBuilder::new()
         .with_media_engine(m)
         .with_interceptor_registry(registry)
+        .with_setting_engine(settings)
         .build())
 }
 

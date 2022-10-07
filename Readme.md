@@ -111,4 +111,7 @@ GARBAGE_COLLECTOR_TTL=3600 # How many seconds audio files and text results will 
 SESSION_KEEP_ALIVE_TIMEOUT=10 # How many seconds webrtc session will alive without incoming packets
 SESSION_TOTAL_TIMEOUT=100 # Max number of seconds webrtc session will alive
 AUDIO_PATH=/tmp # The directory where audio files saving
+WEBRTC_PORT_MIN=0 # Minimal available port for webrtc peer connections
+WEBRTC_PORT_MAX=0 # Maximal available port for webrtc peer connections
+WEBRTC_INTERFACES_ALLOWED= # All interfaces allowed by default. List of allowed network interfaces split by ,
 ```
