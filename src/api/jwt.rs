@@ -1,5 +1,6 @@
 use actix_web::dev::RequestHead;
 use actix_web::guard::Guard;
+use actix_web::http::header::AUTHORIZATION;
 use actix_web::{post, web, HttpResponse, Responder};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use hmac::{Hmac, Mac};
@@ -92,7 +93,7 @@ fn extract_any_data_from_query<T: DeserializeOwned>(head: &RequestHead) -> Optio
 }
 
 fn extract_access_token_from_header(head: &RequestHead) -> Option<String> {
-    head.headers.get("Authorization").and_then(|head| {
+    head.headers.get(AUTHORIZATION).and_then(|head| {
         let token = head
             .to_str()
             .ok()

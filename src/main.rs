@@ -12,6 +12,7 @@ use crate::asr::AsrProcessorStorage;
 use crate::garbage::collector::GarbageCollector;
 use crate::webrtc::{create_api, PortRange, SessionStorage};
 use actix_files::Files;
+use actix_web::http::{header, Method};
 use actix_web::middleware::Compress;
 use actix_web::web::scope;
 use actix_web::{web, App, HttpServer};
@@ -110,6 +111,18 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                actix_cors::Cors::default()
+                    .allowed_methods([Method::GET, Method::POST])
+                    .allowed_headers([
+                        header::AUTHORIZATION,
+                        header::ACCEPT,
+                        header::ACCEPT_ENCODING,
+                        header::CONTENT_TYPE,
+                    ])
+                    .allow_any_origin()
+                    .max_age(3600),
+            )
             .wrap(Compress::default())
             .app_data(vk_client.clone())
             .app_data(web_rtc_api.clone())
