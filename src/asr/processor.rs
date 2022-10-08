@@ -25,6 +25,7 @@ impl AsrProcessor {
         client: Arc<VkApi>,
         dir: PathBuf,
         garbage_collector: Arc<Addr<GarbageCollector>>,
+        speech_model: SpeechModel,
     ) -> Addr<Self> {
         Self::create(|ctx| {
             let processor = Self {
@@ -55,7 +56,7 @@ impl AsrProcessor {
                         .await?;
 
                         let process_response = client
-                            .process_speech(uploader_info, SpeechModel::Spontaneous)
+                            .process_speech(uploader_info, speech_model)
                             .await
                             .map_err(|e| {
                                 std::io::Error::new(std::io::ErrorKind::Other, e.to_string())

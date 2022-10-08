@@ -12,6 +12,8 @@
 <br/>
 <label for="Token">Token: </label><textarea id="Token"></textarea>
 <br/>
+<label for="Model">Enable neutral (default is spontaneous): </label><input id="Model" type="checkbox">
+<br/>
 <label for="localSessionDescription">Browser base64 Session Description: </label><textarea id="localSessionDescription"
                                                                                            readonly></textarea>
 <br/>
@@ -97,7 +99,8 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    session_id: document.getElementById('SessionID').value
+                    session_id: document.getElementById('SessionID').value,
+                    speech: document.getElementById('Model').checked ? 'spontaneous' : 'neutral',
                 })
             })
 

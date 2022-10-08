@@ -1,3 +1,4 @@
+use crate::asr::client::SpeechModel;
 use crate::asr::processor::{ProcessResponse, WaitForResponse};
 use crate::garbage::collector::GarbageCollector;
 use crate::webrtc::CloseSession;
@@ -60,6 +61,7 @@ pub async fn api_text_to_speech(
                 vk_client.into_inner(),
                 config.dir.clone(),
                 garbage_collector.into_inner(),
+                session.speech,
             )
         })
         .downgrade();
@@ -100,6 +102,7 @@ pub async fn api_text_to_speech(
 #[derive(Deserialize)]
 pub struct ProcessAsrRequest {
     session_id: Uuid,
+    speech: SpeechModel,
 }
 
 #[derive(Serialize)]
