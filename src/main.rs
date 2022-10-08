@@ -14,7 +14,7 @@ use crate::webrtc::{create_api, PortRange, SessionStorage};
 use actix_files::Files;
 use actix_web::middleware::Compress;
 use actix_web::web::scope;
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{web, App, HttpServer};
 use dashmap::DashMap;
 use std::collections::HashSet;
 use std::net::SocketAddr;
