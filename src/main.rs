@@ -12,6 +12,7 @@ use crate::asr::AsrProcessorStorage;
 use crate::garbage::collector::GarbageCollector;
 use crate::webrtc::{create_api, PortRange, SessionStorage};
 use actix_files::Files;
+use actix_web::middleware::Compress;
 use actix_web::web::scope;
 use actix_web::{web, App, HttpServer};
 use dashmap::DashMap;
@@ -107,6 +108,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(Compress::default())
             .app_data(vk_client.clone())
             .app_data(web_rtc_api.clone())
             .app_data(user_session_storage.clone())
