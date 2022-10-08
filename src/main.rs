@@ -80,7 +80,7 @@ async fn main() -> std::io::Result<()> {
     let service_token = std::env::var("VK_API_SERVICE_TOKEN").expect("missed env SERVICE_TOKEN");
     let service_key = std::env::var("VK_API_SERVICE_KEY").expect("missed env SERVICE_KEY");
     let audio_path =
-        PathBuf::from(std::env::var("AUDIO_PATH").unwrap_or_else(|_| "/tmp".to_string()));
+        PathBuf::from(std::env::var("AUDIO_DIR").unwrap_or_else(|_| "/tmp".to_string()));
 
     let vk_client = web::Data::new(VkApi::new(service_token.clone()));
     let web_rtc_api = web::Data::new(

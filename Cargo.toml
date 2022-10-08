@@ -1,6 +1,6 @@
 [package]
 name = "wacr"
-version = "1.4.0"
+version = "1.5.0"
 edition = "2021"
 description = "The backend for WebRTC -> VK ASR (speech recognition technology) interaction."
 readme = "Readme.md"
