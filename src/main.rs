@@ -14,7 +14,7 @@ use crate::webrtc::{create_api, PortRange, SessionStorage};
 use actix_files::Files;
 use actix_web::middleware::Compress;
 use actix_web::web::scope;
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer};
 use dashmap::DashMap;
 use std::collections::HashSet;
 use std::net::SocketAddr;
@@ -75,6 +75,8 @@ async fn main() -> std::io::Result<()> {
     )
     .filter(|i| !i.is_empty());
 
+    let static_dir = std::env::var("STATIC_DIR").ok();
+
     let service_token = std::env::var("VK_API_SERVICE_TOKEN").expect("missed env SERVICE_TOKEN");
     let service_key = std::env::var("VK_API_SERVICE_KEY").expect("missed env SERVICE_KEY");
     let audio_path =
@@ -123,7 +125,18 @@ async fn main() -> std::io::Result<()> {
                     .service(api_get_audio)
                     .service(api_text_to_speech),
             )
-            .service(Files::new("/static", "./public").show_files_listing())
+            .configure(|sc| {
+                if let Some(p) = static_dir.clone() {
+                    sc.service(
+                        Files::new("/static", p)
+                            .show_files_listing()
+                            .use_etag(true)
+                            .use_last_modified(true)
+                            .prefer_utf8(true)
+                            .index_file("index.html"),
+                    );
+                }
+            })
             .service(generate_vk_jwt_method)
     })
     .bind(addr)?
