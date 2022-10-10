@@ -2638,7 +2638,7 @@ dependencies = [
 
 [[package]]
 name = "wacr"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "actix",
  "actix-cors",
