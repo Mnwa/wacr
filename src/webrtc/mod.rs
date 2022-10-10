@@ -11,6 +11,7 @@ use webrtc::api::media_engine::{MediaEngine, MIME_TYPE_OPUS};
 use webrtc::api::setting_engine::SettingEngine;
 use webrtc::api::{APIBuilder, API};
 use webrtc::ice::udp_network::{EphemeralUDP, UDPNetwork};
+use webrtc::ice_transport::ice_credential_type::RTCIceCredentialType;
 use webrtc::ice_transport::ice_server::RTCIceServer;
 use webrtc::interceptor::registry::Registry;
 use webrtc::media::io::ogg_writer::OggWriter;
@@ -113,10 +114,34 @@ pub async fn create_session(
 
 fn create_config() -> RTCConfiguration {
     RTCConfiguration {
-        ice_servers: vec![RTCIceServer {
-            urls: vec!["stun:stun.l.google.com:19302".to_owned()],
-            ..Default::default()
-        }],
+        ice_servers: vec![
+            RTCIceServer {
+                urls: vec!["stun:stun.l.google.com:19302".to_owned()],
+                ..Default::default()
+            },
+            RTCIceServer {
+                urls: vec!["stun:openrelay.metered.ca:80".to_owned()],
+                ..Default::default()
+            },
+            RTCIceServer {
+                urls: vec!["turn:openrelay.metered.ca:80".to_owned()],
+                username: "openrelayproject".to_string(),
+                credential: "openrelayproject".to_string(),
+                credential_type: RTCIceCredentialType::Password,
+            },
+            RTCIceServer {
+                urls: vec!["turn:openrelay.metered.ca:443".to_owned()],
+                username: "openrelayproject".to_string(),
+                credential: "openrelayproject".to_string(),
+                credential_type: RTCIceCredentialType::Password,
+            },
+            RTCIceServer {
+                urls: vec!["turn:openrelay.metered.ca:443?transport=tcp".to_owned()],
+                username: "openrelayproject".to_string(),
+                credential: "openrelayproject".to_string(),
+                credential_type: RTCIceCredentialType::Password,
+            },
+        ],
         ..Default::default()
     }
 }
