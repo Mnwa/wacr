@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
-use vkclient::{VkApi as VkApiInner, VkApiError};
+use vkclient::{VkApi as VkApiInner, VkApiBuilder, VkApiError};
 
 #[derive(Clone)]
 pub struct VkApi {
@@ -11,7 +11,7 @@ pub struct VkApi {
 impl VkApi {
     pub fn new(service_token: String) -> Self {
         Self {
-            inner: VkApiInner::from_access_token(service_token),
+            inner: VkApiBuilder::new(service_token).into(),
         }
     }
 

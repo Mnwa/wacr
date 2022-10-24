@@ -1,6 +1,6 @@
 [package]
 name = "wacr"
-version = "1.6.1"
+version = "2.0.0"
 edition = "2021"
 description = "The backend for WebRTC -> VK ASR (speech recognition technology) interaction."
 readme = "Readme.md"
@@ -23,15 +23,19 @@ futures = "0.3"
 env_logger = "0.9"
 dashmap = "5.4"
 actix-files = "0.6"
-vkclient = "1"
-actix-multipart-rfc7578 = "0.10"
+vkclient = "3"
+hyper-multipart-rfc7578 = "0.8"
 serde_urlencoded = "0.7"
 base64 = "0.13"
 actix-cors = "0.6"
 
-[dependencies.awc]
-version = "3"
-features = ["rustls"]
+[dependencies.hyper-rustls]
+version = "0.23"
+features = ["http2"]
+
+[dependencies.hyper]
+version = "0.14"
+features = ["client", "http2"]
 
 [dependencies.url]
 version = "2"
