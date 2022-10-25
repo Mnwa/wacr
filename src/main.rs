@@ -22,6 +22,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use vkclient::upload::VkUploader;
 
 pub type UserSessionStorage = DashMap<UserId, Arc<SessionStorage>>;
 pub type UserAsrProcessorStorage = DashMap<UserId, Arc<AsrProcessorStorage>>;
@@ -84,6 +85,7 @@ async fn main() -> std::io::Result<()> {
         PathBuf::from(std::env::var("AUDIO_DIR").unwrap_or_else(|_| "/tmp".to_string()));
 
     let vk_client = web::Data::new(VkApi::new(service_token.clone()));
+    let vk_client_uploader = web::Data::new(VkUploader::default());
     let web_rtc_api = web::Data::new(
         create_api(PortRange(udp_port_min, udp_port_max), interfaces_allowed)
             .expect("fail to create api instance"),
@@ -125,6 +127,7 @@ async fn main() -> std::io::Result<()> {
             )
             .wrap(Compress::default())
             .app_data(vk_client.clone())
+            .app_data(vk_client_uploader.clone())
             .app_data(web_rtc_api.clone())
             .app_data(user_session_storage.clone())
             .app_data(user_asr_processor_storage.clone())

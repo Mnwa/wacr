@@ -2832,13 +2832,14 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vkclient"
-version = "3.0.0"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebaa00fb88d8152a23268f8e5a493c72cd41cfb371f2ad0805e4538be7a6af85"
+checksum = "61440f88bdc8ced26932c46c3d821ce428a158ba918f71ad5d3633d62aa4b312"
 dependencies = [
  "cfg-if",
  "flate2",
  "hyper",
+ "hyper-multipart-rfc7578",
  "hyper-rustls",
  "rmp-serde",
  "serde",
@@ -2849,7 +2850,7 @@ dependencies = [
 
 [[package]]
 name = "wacr"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "actix",
  "actix-cors",

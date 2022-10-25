@@ -1,5 +1,4 @@
 use crate::asr::client::{CheckProcessingStatusResponse, SpeechModel};
-use crate::asr::upload::Uploader;
 use crate::garbage::collector::{ClearAsr, GarbageCollector};
 use crate::webrtc::get_audio_path;
 use crate::{UserId, VkApi};
@@ -9,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
+use vkclient::upload::{Form, VkUploader};
 
 pub struct AsrProcessor {
     id: Uuid,
@@ -23,6 +23,7 @@ impl AsrProcessor {
         id: Uuid,
         user_id: UserId,
         client: Arc<VkApi>,
+        uploader: Arc<VkUploader>,
         dir: PathBuf,
         garbage_collector: Arc<Addr<GarbageCollector>>,
         speech_model: SpeechModel,
@@ -49,11 +50,13 @@ impl AsrProcessor {
                             })?
                             .upload_url;
 
-                        let uploader_info = Uploader {
-                            upload_url,
-                            audio_path: audio_path.clone(),
-                        }
-                        .await?;
+                        let mut form = Form::default();
+                        form.add_file("file", audio_path)?;
+
+                        let uploader_info =
+                            uploader.upload(upload_url, form).await.map_err(|e| {
+                                std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+                            })?;
 
                         let process_response = client
                             .process_speech(uploader_info, speech_model)

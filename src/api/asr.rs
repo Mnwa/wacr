@@ -11,13 +11,16 @@ use actix_web::{post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use log::error;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use vkclient::upload::VkUploader;
 
+#[allow(clippy::too_many_arguments)]
 #[post("/asr")]
 pub async fn api_text_to_speech(
     req: HttpRequest,
     user_session_storage: web::Data<UserSessionStorage>,
     user_asr_processor_storage: web::Data<UserAsrProcessorStorage>,
     vk_client: web::Data<VkApi>,
+    vk_uploader: web::Data<VkUploader>,
     config: web::Data<SessionConfig>,
     garbage_collector: web::Data<Addr<GarbageCollector>>,
     session: web::Json<ProcessAsrRequest>,
@@ -59,6 +62,7 @@ pub async fn api_text_to_speech(
                 session.session_id,
                 user_id,
                 vk_client.into_inner(),
+                vk_uploader.into_inner(),
                 config.dir.clone(),
                 garbage_collector.into_inner(),
                 session.speech,
