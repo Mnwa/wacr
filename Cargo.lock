@@ -2832,9 +2832,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vkclient"
-version = "3.1.0"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61440f88bdc8ced26932c46c3d821ce428a158ba918f71ad5d3633d62aa4b312"
+checksum = "8ea34f31af583a4c60ae95f74d9f418dac04701b1e79db5a9bf9b92e7645638d"
 dependencies = [
  "cfg-if",
  "flate2",
@@ -2850,7 +2850,7 @@ dependencies = [
 
 [[package]]
 name = "wacr"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "actix",
  "actix-cors",
